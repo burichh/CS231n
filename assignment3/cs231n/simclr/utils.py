@@ -23,7 +23,7 @@ def train(model, data_loader, train_optimizer, epoch, epochs, batch_size=32, tem
     - The average loss.
     """
     model.train()
-    total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader)
+    total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
     for data_pair in train_bar:
         x_i, x_j, target = data_pair
         x_i, x_j = x_i.to(device), x_j.to(device)
@@ -62,7 +62,7 @@ def train_val(model, data_loader, train_optimizer, epoch, epochs, device='cuda')
     model.train() if is_train else model.eval()
     loss_criterion = torch.nn.CrossEntropyLoss()
 
-    total_loss, total_correct_1, total_correct_5, total_num, data_bar = 0.0, 0.0, 0.0, 0, tqdm(data_loader)
+    total_loss, total_correct_1, total_correct_5, total_num, data_bar = 0.0, 0.0, 0.0, 0, tqdm(data_loader, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
     with (torch.enable_grad() if is_train else torch.no_grad()):
         for data, target in data_bar:
             data, target = data.to(device), target.to(device)
@@ -92,7 +92,7 @@ def test(model, memory_data_loader, test_data_loader, epoch, epochs, c, temperat
     total_top1, total_top5, total_num, feature_bank = 0.0, 0.0, 0, []
     with torch.no_grad():
         # generate feature bank
-        for data, _, target in tqdm(memory_data_loader, desc='Feature extracting'):
+        for data, _, target in tqdm(memory_data_loader, desc='Feature extracting', bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'):
             feature, out = model(data.to(device))
             feature_bank.append(feature)
         # [D, N]
@@ -100,7 +100,7 @@ def test(model, memory_data_loader, test_data_loader, epoch, epochs, c, temperat
         # [N]
         feature_labels = torch.tensor(memory_data_loader.dataset.targets, device=feature_bank.device)
         # loop test data to predict the label by weighted knn search
-        test_bar = tqdm(test_data_loader)
+        test_bar = tqdm(test_data_loader, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
         for data, _, target in test_bar:
             data, target = data.to(device), target.to(device)
             feature, out = model(data)
