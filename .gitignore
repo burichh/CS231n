@@ -1,0 +1,7 @@
+data
+pretrained_model
+results
+coco_captioning
+MNIST_data
+*.npz
+*__pycache__
