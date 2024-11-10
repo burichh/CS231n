@@ -1,6 +1,7 @@
 from builtins import range
 from builtins import object
 import numpy as np
+import matplotlib.pyplot as plt 
 
 from ..layers import *
 from ..layer_utils import *
@@ -74,7 +75,16 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        dimensions = [input_dim] + hidden_dims + [num_classes]
+
+        for i in range(1, len(dimensions)):
+            self.params['W' + str(i)] = weight_scale * np.random.randn(dimensions[i-1], dimensions[i])
+            self.params['b' + str(i)] = np.zeros(dimensions[i])
+
+        if self.normalization == "batchnorm" or self.normalization == "layernorm":
+            for i in range(1, len(dimensions) - 1):
+                self.params["gamma" + str(i)] = np.ones(dimensions[i])
+                self.params["beta" + str(i)] = np.zeros(dimensions[i])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -148,7 +158,29 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        cache = {}
+
+        for i in range(1, self.num_layers):
+            w = self.params['W' + str(i)]
+            b = self.params['b' + str(i)]
+
+            if self.normalization == "batchnorm":
+                gamma = self.params['gamma' + str(i)]
+                beta = self.params['beta' + str(i)]
+                X, cache[str(i)] = affine_bn_relu_forward(X, w, b, gamma, beta, self.bn_params[i-1])
+            elif self.normalization == "layernorm":
+                gamma = self.params['gamma' + str(i)]
+                beta = self.params['beta' + str(i)]
+                X, cache[str(i)] = affine_ln_relu_forward(X, w, b, gamma, beta, self.bn_params[i-1])
+            else:
+                X, cache[str(i)] = affine_relu_forward(X, w, b)
+
+            if self.use_dropout:
+                X, cache[str(i) + "_dropout"] = dropout_forward(X, self.dropout_param)
+
+        w = self.params['W' + str(self.num_layers)]
+        b = self.params['b' + str(self.num_layers)]
+        scores, score_cache = affine_forward(X, w, b)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -175,7 +207,35 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        reg_loss = 0
+        for i in range(self.num_layers):
+            reg_loss += np.sum(np.power(self.params['W' + str(i+1)], 2))
+        reg_loss *= (0.5 * self.reg)
+
+        loss, dscores = softmax_loss(scores, y)
+        loss += reg_loss
+
+        dx, dw, db = affine_backward(dscores, score_cache)
+        grads['W' + str(self.num_layers)] = dw + self.reg * self.params['W' + str(self.num_layers)]
+        grads['b' + str(self.num_layers)] = db
+
+        for i in range(self.num_layers-1, 0, -1):
+            if self.use_dropout:
+                dx = dropout_backward(dx, cache[str(i) + "_dropout"])
+
+            if self.normalization == "batchnorm":
+                dx, dw, db, dgamma, dbeta = affine_bn_relu_backward(dx, cache[str(i)])
+                grads['gamma' + str(i)] = dgamma
+                grads['beta' + str(i)] = dbeta
+            elif self.normalization == "layernorm":
+                dx, dw, db, dgamma, dbeta = affine_ln_relu_backward(dx, cache[str(i)])
+                grads['gamma' + str(i)] = dgamma
+                grads['beta' + str(i)] = dbeta
+            else:
+                dx, dw, db = affine_relu_backward(dx, cache[str(i)])
+            
+            grads['W' + str(i)] = dw + self.reg * self.params['W' + str(i)]
+            grads['b' + str(i)] = db
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -183,3 +243,57 @@ class FullyConnectedNet(object):
         ############################################################################
 
         return loss, grads
+    
+    def loss_with_plot(self, X, example_idx=0, y=None):
+        cache = {}
+
+        fig, axs = plt.subplots(2, self.num_layers + 1, figsize=(12, 4))
+
+        activation_hist_range = None#(0,100)
+        activation_bin_num = 30
+
+        axs[0, 0].hist(X[example_idx].reshape(-1,), bins=10, color='blue')
+
+        for i in range(1, self.num_layers):
+            w = self.params['W' + str(i)]
+            b = self.params['b' + str(i)]
+            X, cache[str(i)] = affine_relu_forward(X, w, b)
+            axs[0, i].hist(X[example_idx], bins=activation_bin_num, color='blue', range=activation_hist_range)
+
+        w = self.params['W' + str(self.num_layers)]
+        b = self.params['b' + str(self.num_layers)]
+        scores, score_cache = affine_forward(X, w, b)
+
+        axs[0, self.num_layers].hist(scores[example_idx], bins=activation_bin_num, color='blue', range=activation_hist_range)
+
+        np.set_printoptions(precision=2)
+        print(scores[example_idx])
+        print(np.argmax(scores[example_idx]))
+
+        mode = "test" if y is None else "train"
+        if mode == "test":
+            return
+
+        loss, grads = 0.0, {}
+
+        reg_loss = 0
+        for i in range(self.num_layers):
+            reg_loss += np.sum(np.power(self.params['W' + str(i+1)], 2))
+        reg_loss *= (0.5 * self.reg)
+
+        loss, dscores = softmax_loss(scores, y)
+        loss += reg_loss
+
+        grad_hist_range_max = 2.0
+        grad_hist_range = None#(-grad_hist_range_max, grad_hist_range_max)
+
+        dx, dw, db = affine_backward(dscores, score_cache)
+        grads['W' + str(self.num_layers)] = dw + self.reg * self.params['W' + str(self.num_layers)]
+        grads['b' + str(self.num_layers)] = db
+        axs[1, self.num_layers].hist(dw.reshape(-1,), bins=30, color='red', range=grad_hist_range)
+
+        for i in range(self.num_layers-1, 0, -1):
+            dx, dw, db = affine_relu_backward(dx, cache[str(i)])
+            grads['W' + str(i)] = dw + self.reg * self.params['W' + str(i)]
+            grads['b' + str(i)] = db
+            axs[1, i].hist(dw.reshape(-1,), bins=30, color='red', range=grad_hist_range)
