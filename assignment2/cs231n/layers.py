@@ -234,13 +234,11 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         batch_mean = np.average(x, axis=0)
         batch_variance = np.var(x, axis=0)
         x_hat = (x - batch_mean) / np.sqrt(batch_variance + eps)
+        out = gamma * x_hat + beta
+        cache = (x - batch_mean, np.sqrt(batch_variance + eps), x_hat, gamma)
 
         running_mean = momentum * running_mean + (1 - momentum) * batch_mean
         running_var = momentum * running_var + (1 - momentum) * batch_variance
-
-        out = gamma * x_hat + beta
-
-        cache = (x - batch_mean, np.sqrt(batch_variance + eps), x_hat, gamma)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -390,8 +388,8 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    layer_mean = np.average(x, axis=1).reshape((-1,1))
-    layer_variance = np.var(x, axis=1).reshape((-1,1))
+    layer_mean = np.average(x, axis=1, keepdims=True)
+    layer_variance = np.var(x, axis=1, keepdims=True)
     x_hat = (x - layer_mean) / np.sqrt(layer_variance + eps)
 
     out = gamma * x_hat + beta
@@ -432,7 +430,7 @@ def layernorm_backward(dout, cache):
     std, x_hat, gamma = cache
 
     dx_hat = dout * gamma
-    dx = (dx_hat - np.average(dx_hat,1).reshape((-1,1)) - x_hat * np.average(dx_hat * x_hat,1).reshape((-1,1))) / std
+    dx = (dx_hat - np.average(dx_hat, 1, keepdims=True) - x_hat * np.average(dx_hat * x_hat, 1, keepdims=True)) / std
     dgamma = np.sum(dout * x_hat, axis=0)
     dbeta = np.sum(dout, axis=0)
 
