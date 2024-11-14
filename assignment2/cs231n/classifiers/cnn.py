@@ -143,11 +143,11 @@ class ThreeLayerConvNet(object):
         reg_loss *= (0.5 * self.reg)
 
         loss, dscores = softmax_loss(scores, y)
+        loss += reg_loss
+
         dx, grads['W3'], grads['b3'] = affine_backward(dscores, affine2_cache)
         dx, grads['W2'], grads['b2'] = affine_relu_backward(dx, affine1_cache)
         _, grads['W1'], grads['b1'] = conv_relu_pool_backward(dx, conv_cache)
-
-        loss += reg_loss
         grads['W1'] += self.reg * self.params['W1']
         grads['W2'] += self.reg * self.params['W2']
         grads['W3'] += self.reg * self.params['W3']
