@@ -7,3 +7,4 @@ MNIST_data
 *__pycache__
 cifar-10-batches-py
 *tar.gz
+*-checkpoint.ipynb

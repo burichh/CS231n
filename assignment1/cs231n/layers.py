@@ -28,7 +28,7 @@ def affine_forward(x, w, b):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = np.matmul(np.reshape(x, (x.shape[0], -1)), w) + b
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -61,7 +61,11 @@ def affine_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+
+    dx = np.reshape(np.matmul(dout, np.transpose(w)), x.shape)
+    dw = np.matmul(np.transpose(np.reshape(x, (N, -1))), dout)
+    db = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -87,7 +91,10 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    mask = x >= 0
+    
+    out = np.zeros_like(x)
+    out[mask] = x[mask]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -114,7 +121,9 @@ def relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dx = np.zeros_like(dout)
+    mask = x >= 0
+    dx[mask] = dout[mask]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -773,7 +782,18 @@ def svm_loss(x, y):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+    scores = x - np.reshape(x[range(N), y], (-1,1)) + 1
+    scores[range(N), y] = 0.0
+    max = np.maximum(0, scores)
+    loss = np.average(np.sum(max, axis=1))
+
+    mask = max > 0
+    dx = np.zeros_like(max)
+    dx[mask] = 1.0
+    mask_sum = np.sum(mask, axis=1)
+    dx[range(N), y] = -mask_sum
+    dx /= N
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -803,7 +823,17 @@ def softmax_loss(x, y):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+
+    x_max = np.reshape(np.max(x, axis=1), (-1, 1))
+    exp_shifted = np.exp(x - x_max)
+    sum = np.sum(exp_shifted, axis=1)
+    s = exp_shifted / np.reshape(sum, (-1,1))
+    loss = np.average(x_max - x[range(N), y] + np.log(sum))
+
+    y_one_hot_encoded = np.zeros_like(s)
+    y_one_hot_encoded[range(N), y] = 1.0
+    dx = (s - y_one_hot_encoded)/N
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
