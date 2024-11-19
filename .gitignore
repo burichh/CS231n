@@ -6,3 +6,4 @@ MNIST_data
 *.npz
 *__pycache__
 cifar-10-batches-py
+*tar.gz
