@@ -120,7 +120,6 @@ class TwoLayerNet(object):
         W2_squared_norm = np.sum(np.power(self.params['W2'], 2))
         reg_loss = 0.5 * self.reg * (W1_squared_norm + W2_squared_norm)
 
-        
         loss, dscores = softmax_loss(scores, y)
         loss += reg_loss
 
